@@ -1,10 +1,19 @@
-import { createQueryPlan } from "@/lib/agent/planner";
+import { createQueryPlan, extractResponseText } from "@/lib/agent/planner";
 import type { ConversationContext } from "@/lib/types";
 import { describe, expect, it } from "vitest";
 
 const sectors = ["Mining", "Renewables", "Railways", "Powerline", "Construction", "Others"];
 
 describe("query planner fallback", () => {
+  it("reads text from both raw and SDK-shaped Responses payloads", () => {
+    expect(extractResponseText({ output_text: '{"ready":true}' })).toBe('{"ready":true}');
+    expect(
+      extractResponseText({
+        output: [{ content: [{ type: "output_text", text: '{"ready":true}' }] }],
+      }),
+    ).toBe('{"ready":true}');
+  });
+
   it("maps the required evaluator questions", async () => {
     expect((await createQueryPlan("How is our pipeline looking this quarter?", sectors)).intent).toBe("pipeline_health");
     expect((await createQueryPlan("Which sector has the strongest pipeline?", sectors)).intent).toBe("strongest_sector");

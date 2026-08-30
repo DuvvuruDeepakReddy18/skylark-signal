@@ -173,6 +173,20 @@ function deterministicPlan(
 
 interface OpenAiResponse {
   output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      type?: string;
+      text?: string;
+    }>;
+  }>;
+}
+
+export function extractResponseText(payload: OpenAiResponse): string | undefined {
+  if (payload.output_text) return payload.output_text;
+  return payload.output
+    ?.flatMap((item) => item.content ?? [])
+    .find((content) => content.type === "output_text" && typeof content.text === "string")
+    ?.text;
 }
 
 async function modelPlan(
@@ -222,8 +236,9 @@ async function modelPlan(
     });
     if (!response.ok) return null;
     const payload = (await response.json()) as OpenAiResponse;
-    if (!payload.output_text) return null;
-    const parsed = planOutputSchema.safeParse(JSON.parse(payload.output_text));
+    const outputText = extractResponseText(payload);
+    if (!outputText) return null;
+    const parsed = planOutputSchema.safeParse(JSON.parse(outputText));
     if (!parsed.success) return null;
     return { ...parsed.data, planner: "openai" };
   } catch {
