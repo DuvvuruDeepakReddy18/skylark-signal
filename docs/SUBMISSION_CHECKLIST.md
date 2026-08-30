@@ -10,7 +10,7 @@
 ## Live integration
 
 - [ ] Set `MONDAY_API_TOKEN`, `MONDAY_DEALS_BOARD_ID`, and `MONDAY_WORK_ORDERS_BOARD_ID` in the deployment environment.
-- [ ] Optionally set `OPENAI_API_KEY` and `OPENAI_MODEL`; deterministic planning remains available without them.
+- [ ] Optionally set `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `OPENAI_MODEL`; deterministic planning remains available without them.
 - [ ] Redeploy after setting environment variables.
 - [ ] Confirm the header reports **Live**, not **Demo**.
 - [ ] Ask one Deals query, one Work Orders query, and one cross-board query against live boards.

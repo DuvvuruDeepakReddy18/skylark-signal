@@ -95,7 +95,7 @@ The planner produces a strict internal contract:
 }
 ```
 
-Raw chain-of-thought is never exposed. The UI shows only a concise scope statement. If `OPENAI_API_KEY` exists, the planner uses strict JSON-schema output through the OpenAI Responses API and `gpt-5.4-mini`; otherwise it uses the same deterministic contract and discloses that fallback. OpenAI documents both [strict function/structured output schemas](https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create) and [structured-output support for GPT-5.4 Mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini).
+Raw chain-of-thought is never exposed. The UI shows only a concise scope statement. If `OPENAI_API_KEY` exists, the planner uses strict JSON-schema output through an allow-listed OpenAI-compatible Responses API; otherwise it uses the same deterministic contract and discloses that fallback. The default is OpenAI with `gpt-5.4-mini`. The deployed assessment uses Groq's [OpenAI-compatible Responses API](https://console.groq.com/docs/responses-api) with [`openai/gpt-oss-20b`](https://console.groq.com/docs/model/openai/gpt-oss-20b), which supports strict JSON-schema output. Calculations remain deterministic in either mode.
 
 ## monday.com integration
 
@@ -178,6 +178,7 @@ MONDAY_API_VERSION=2026-07
 
 # Optional model planner
 OPENAI_API_KEY=your_server_only_key
+OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-5.4-mini
 
 DATA_MODE=auto
@@ -185,6 +186,8 @@ CACHE_TTL_SECONDS=120
 ```
 
 Never prefix secrets with `NEXT_PUBLIC_`.
+
+For the deployed Groq planner, use `OPENAI_BASE_URL=https://api.groq.com/openai/v1` and `OPENAI_MODEL=openai/gpt-oss-20b`. `OPENAI_API_KEY` holds the server-only Groq key; the compatibility-oriented variable name avoids introducing a second credential path.
 
 ## Monday setup
 

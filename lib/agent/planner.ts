@@ -185,7 +185,7 @@ async function modelPlan(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch(`${env.OPENAI_BASE_URL}/responses`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.OPENAI_API_KEY}`,
