@@ -1,5 +1,5 @@
-import { createQueryPlan, extractResponseText } from "@/lib/agent/planner";
-import type { ConversationContext } from "@/lib/types";
+import { createQueryPlan, extractResponseText, reconcileModelPlan } from "@/lib/agent/planner";
+import type { ConversationContext, QueryPlan } from "@/lib/types";
 import { describe, expect, it } from "vitest";
 
 const sectors = ["Mining", "Renewables", "Railways", "Powerline", "Construction", "Others"];
@@ -12,6 +12,31 @@ describe("query planner fallback", () => {
         output: [{ content: [{ type: "output_text", text: '{"ready":true}' }] }],
       }),
     ).toBe('{"ready":true}');
+  });
+
+  it("keeps high-confidence business routing authoritative over a model mismatch", async () => {
+    const rulePlan = await createQueryPlan("Which sector has the strongest pipeline?", sectors);
+    const mismatchedModelPlan = {
+      ...rulePlan,
+      intent: "clarification" as const,
+      boards: ["deals", "work_orders"] as QueryPlan["boards"],
+      metrics: [],
+      needsClarification: true,
+      clarificationQuestion: "Which sector?",
+      confidence: 0.7,
+      planner: "openai" as const,
+    };
+
+    const reconciled = reconcileModelPlan(
+      "Which sector has the strongest pipeline?",
+      rulePlan,
+      mismatchedModelPlan,
+    );
+
+    expect(reconciled.intent).toBe("strongest_sector");
+    expect(reconciled.boards).toEqual(["deals"]);
+    expect(reconciled.needsClarification).toBe(false);
+    expect(reconciled.planner).toBe("openai");
   });
 
   it("maps the required evaluator questions", async () => {

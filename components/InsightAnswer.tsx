@@ -111,7 +111,7 @@ export function InsightAnswer({ answer, analystMode }: { answer: Insight; analys
 
       <footer className="answer-footer">
         <div>{answer.sources.map((source) => <span key={source}><ExternalLink size={12} />{source}</span>)}</div>
-        <small>{answer.plan.planner === "openai" ? "AI-planned · deterministic calculation" : "Deterministic planner fallback · deterministic calculation"}</small>
+        <small>{answer.plan.planner === "openai" ? "AI-assisted · rule-validated · deterministic calculation" : "Deterministic planner fallback · deterministic calculation"}</small>
       </footer>
     </article>
   );

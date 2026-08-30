@@ -189,6 +189,20 @@ export function extractResponseText(payload: OpenAiResponse): string | undefined
     ?.text;
 }
 
+export function reconcileModelPlan(
+  message: string,
+  rulePlan: QueryPlan,
+  modelPlan: QueryPlan,
+): QueryPlan {
+  const normalized = normalizedKey(message);
+  const ruleContractIsAuthoritative =
+    rulePlan.intent !== "clarification" ||
+    rulePlan.confidence >= 0.9 ||
+    normalized === "how are we doing";
+
+  return ruleContractIsAuthoritative ? { ...rulePlan, planner: "openai" } : modelPlan;
+}
+
 async function modelPlan(
   message: string,
   sectors: string[],
@@ -269,6 +283,8 @@ export async function createQueryPlan(
   sectors: string[],
   context?: ConversationContext,
 ): Promise<QueryPlan> {
-  const planned = (await modelPlan(message, sectors, context)) ?? deterministicPlan(message, sectors, context);
+  const rulePlan = deterministicPlan(message, sectors, context);
+  const generatedPlan = await modelPlan(message, sectors, context);
+  const planned = generatedPlan ? reconcileModelPlan(message, rulePlan, generatedPlan) : rulePlan;
   return groundPlan(planned, sectors);
 }

@@ -95,7 +95,7 @@ The planner produces a strict internal contract:
 }
 ```
 
-Raw chain-of-thought is never exposed. The UI shows only a concise scope statement. If `OPENAI_API_KEY` exists, the planner uses strict JSON-schema output through an allow-listed OpenAI-compatible Responses API; otherwise it uses the same deterministic contract and discloses that fallback. The default is OpenAI with `gpt-5.4-mini`. The deployed assessment uses Groq's [OpenAI-compatible Responses API](https://console.groq.com/docs/responses-api) with [`openai/gpt-oss-20b`](https://console.groq.com/docs/model/openai/gpt-oss-20b), which supports strict JSON-schema output. Calculations remain deterministic in either mode.
+Raw chain-of-thought is never exposed. The UI shows only a concise scope statement. If `OPENAI_API_KEY` exists, the planner uses strict JSON-schema output through an allow-listed OpenAI-compatible Responses API; otherwise it uses the same deterministic contract and discloses that fallback. High-confidence business intent, board, period, and metric routing remain rule-authoritative, so a model cannot redirect canonical evaluator queries; the UI labels this path **AI-assisted · rule-validated**. The default provider is OpenAI with `gpt-5.4-mini`. The deployed assessment uses Groq's [OpenAI-compatible Responses API](https://console.groq.com/docs/responses-api) with [`openai/gpt-oss-20b`](https://console.groq.com/docs/model/openai/gpt-oss-20b), which supports strict JSON-schema output. Calculations remain deterministic in either mode.
 
 ## monday.com integration
 
