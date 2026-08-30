@@ -7,7 +7,7 @@ Skylark Signal is a Founder Intelligence agent over monday.com. It answers busin
 ## Links
 
 - Hosted prototype: <https://skylark-signal-one.vercel.app>
-- Source repository: _added after repository publication_
+- Source repository: <https://github.com/DuvvuruDeepakReddy18/skylark-signal>
 - Assignment submission form: <https://forms.gle/qGihfi4zCLBxKWK68>
 
 The public prototype falls back to a clearly labelled **Demo Mode — simulated environment** when server-side Monday credentials are not configured. Demo Mode exercises the full agent pipeline with deterministic synthetic records; it never presents simulated data as live Monday data.
@@ -43,7 +43,7 @@ This reduces hallucinated arithmetic and makes results testable.
 | Cross-board queries | Aggregate join on normalized sector; unsafe masked-name/customer joins rejected |
 | Graceful API failure | Timeout, auth, permission, rate-limit, schema, stale-cache, empty-board, and missing-config paths |
 | Leadership updates (optional) | Live/simulated weekly briefing with pipeline, billed revenue, sales/operations risks, quality, and actions |
-| Hosted, source, README | Public deployment above; repository link added after publication |
+| Hosted, source, README | Public deployment and public repository are linked above |
 | Decision Log ≤2 pages | `DECISION_LOG.md` plus submission-ready PDF |
 
 More detail is in [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md).
