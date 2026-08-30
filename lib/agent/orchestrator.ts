@@ -1,11 +1,12 @@
 import { buildInsightAnswer, computeBusinessPulse } from "@/lib/analytics/engine";
-import { createQueryPlan } from "@/lib/agent/planner";
+import { createQueryPlan, createRoutingPlan } from "@/lib/agent/planner";
 import { normalizeSnapshot } from "@/lib/data/normalization";
 import { assessDataQuality } from "@/lib/data/quality";
 import { getDataSnapshot } from "@/lib/data/repository";
 import { logEvent } from "@/lib/observability/logger";
 import type {
   BootstrapResponse,
+  AnalysisStage,
   ChatRequest,
   ChatResponse,
   ConversationContext,
@@ -49,21 +50,43 @@ function nextContext(
   return { lastPlan: plan, mentionedSectors: mentioned.slice(-6) };
 }
 
-export async function runAnalysis(request: ChatRequest): Promise<ChatResponse> {
+export function adaptAnswerForMode(
+  answer: ChatResponse["answer"],
+  founderMode: boolean,
+): ChatResponse["answer"] {
+  if (!founderMode) return answer;
+  return {
+    ...answer,
+    evidence: answer.evidence.slice(0, 3),
+  };
+}
+
+export async function runAnalysis(
+  request: ChatRequest,
+  onProgress?: (stage: AnalysisStage) => void,
+): Promise<ChatResponse> {
   const requestId = stableId("analysis", `${Date.now()}-${request.message.length}`);
   const started = performance.now();
   const timings: Record<string, number> = {};
   logEvent("query_received", { requestId });
 
+  onProgress?.("planning");
+  const routingStarted = performance.now();
+  const route = createRoutingPlan(request.message, request.context);
+  timings.routing = Math.round(performance.now() - routingStarted);
+
+  onProgress?.("retrieval");
   const retrievalStarted = performance.now();
-  const snapshot = await getDataSnapshot({ requestId });
+  const snapshot = await getDataSnapshot({ requestId, boards: route.boards });
   timings.retrieval = Math.round(performance.now() - retrievalStarted);
 
+  onProgress?.("normalization");
   const normalizationStarted = performance.now();
   const normalized = normalizeSnapshot(snapshot);
   timings.normalization = Math.round(performance.now() - normalizationStarted);
   logEvent("normalization_completed", { requestId, count: normalized.deals.length + normalized.workOrders.length });
 
+  onProgress?.("quality");
   const qualityStarted = performance.now();
   const quality = assessDataQuality(normalized);
   timings.quality = Math.round(performance.now() - qualityStarted);
@@ -74,8 +97,9 @@ export async function runAnalysis(request: ChatRequest): Promise<ChatResponse> {
   timings.planning = Math.round(performance.now() - planningStarted);
   logEvent("query_planned", { requestId, intent: plan.intent });
 
+  onProgress?.("analysis");
   const analysisStarted = performance.now();
-  const answer = buildInsightAnswer(plan, normalized, quality);
+  const answer = adaptAnswerForMode(buildInsightAnswer(plan, normalized, quality), request.founderMode);
   timings.analysis = Math.round(performance.now() - analysisStarted);
   timings.total = Math.round(performance.now() - started);
   logEvent("analysis_completed", { requestId, intent: plan.intent, durationMs: timings.total });

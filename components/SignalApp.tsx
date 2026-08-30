@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { InsightAnswer } from "@/components/InsightAnswer";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { SignalMap } from "@/components/SignalMap";
-import type { BootstrapResponse, ChatResponse, ConversationContext, InsightAnswer as Insight } from "@/lib/types";
+import type { AnalysisStage, BootstrapResponse, ChatResponse, ConversationContext, InsightAnswer as Insight } from "@/lib/types";
 import { AlertTriangle, ArrowUpRight, BrainCircuit, ChartNoAxesCombined, CircleGauge, RotateCw, Rows3, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -25,7 +25,16 @@ interface ConversationEntry {
   role: "user" | "assistant";
   text?: string;
   answer?: Insight;
+  prompt?: string;
 }
+
+const progressIndex: Record<AnalysisStage, number> = {
+  planning: 0,
+  retrieval: 1,
+  normalization: 2,
+  quality: 3,
+  analysis: 4,
+};
 
 async function requestBootstrap(force = false): Promise<BootstrapResponse> {
   const response = await fetch(`/api/bootstrap${force ? "?refresh=1" : ""}`, { cache: "no-store" });
@@ -76,22 +85,51 @@ export function SignalApp() {
     setConversation((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: message }]);
     setLoading(true);
     setActiveStep(0);
-    const timer = window.setInterval(() => setActiveStep((step) => Math.min(4, step + 1)), 420);
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
         body: JSON.stringify({ message, founderMode: !analystMode, context }),
       });
-      const payload = await response.json() as ChatResponse & { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Analysis failed.");
-      setConversation((current) => [...current, { id: `agent-${Date.now()}`, role: "assistant", answer: payload.answer }]);
+      if (!response.ok || !response.body) {
+        const payload = await response.json() as { error?: string };
+        throw new Error(payload.error ?? "Analysis failed.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let payload: ChatResponse | undefined;
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as
+            | { type: "progress"; stage: AnalysisStage }
+            | { type: "result"; payload: ChatResponse }
+            | { type: "error"; error: string };
+          if (event.type === "progress") setActiveStep(progressIndex[event.stage]);
+          if (event.type === "result") payload = event.payload;
+          if (event.type === "error") throw new Error(event.error);
+        }
+        if (done) break;
+      }
+      if (!payload) throw new Error("The analysis ended without a result.");
+
+      setConversation((current) => [...current, {
+        id: `agent-${Date.now()}`,
+        role: "assistant",
+        answer: payload.answer,
+        prompt: message,
+      }]);
       setContext(payload.context);
       if (bootstrap) setBootstrap({ ...bootstrap, connection: payload.connection });
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "The analysis could not be completed.");
     } finally {
-      window.clearInterval(timer);
       setLoading(false);
     }
   };
@@ -140,7 +178,14 @@ export function SignalApp() {
               <div className="conversation-feed">
                 {conversation.map((entry) => entry.role === "user"
                   ? <div className="user-message" key={entry.id}><span>You</span><p>{entry.text}</p></div>
-                  : entry.answer && <InsightAnswer answer={entry.answer} analystMode={analystMode} key={entry.id} />)}
+                  : entry.answer && <InsightAnswer
+                    answer={entry.answer}
+                    analystMode={analystMode}
+                    key={entry.id}
+                    onRegenerate={entry.answer.plan.intent === "leadership_update" && entry.prompt
+                      ? () => void ask(entry.prompt as string)
+                      : undefined}
+                  />)}
                 {loading && <AnalysisProgress activeStep={activeStep} />}
                 {requestError && <div className="analysis-error"><AlertTriangle size={17} /><div><strong>I couldn’t complete that analysis.</strong><p>{requestError}</p></div><button onClick={() => setRequestError(undefined)}>Dismiss</button></div>}
                 <div ref={feedEndRef} />

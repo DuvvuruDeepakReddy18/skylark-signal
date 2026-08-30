@@ -20,12 +20,13 @@ Founder questions cross commercial and operational systems, while the source dat
 
 Skylark Signal separates language understanding from business computation:
 
-1. A constrained planner identifies intent, boards, filters, period, and metrics.
-2. A read-only Monday adapter retrieves every item from both configured boards.
+1. A deterministic pre-router identifies the minimum board set before retrieval.
+2. A read-only Monday adapter retrieves every item from only the required configured board(s).
 3. A normalization layer preserves raw values and creates canonical typed records.
 4. A data-quality engine flags exclusions and confidence-limiting issues.
-5. Deterministic analytics code performs every sum, filter, ranking, and risk rule.
-6. A response composer returns Signal, Evidence, Risk, Action, caveats, sources, records, and calculation lineage.
+5. A constrained, live-taxonomy-grounded planner identifies intent, filters, period, and metrics.
+6. Deterministic analytics code performs every sum, filter, ranking, and risk rule.
+7. A response composer returns Signal, Evidence, Risk, Action, caveats, sources, records, and calculation lineage.
 
 This reduces hallucinated arithmetic and makes results testable.
 
@@ -53,20 +54,19 @@ More detail is in [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEA
 ```mermaid
 flowchart TD
     A[Founder question] --> B[Chat API]
-    B --> C[Query planner]
-    C -->|strict typed plan| D[Agent orchestrator]
-    D --> E[Monday data repository]
-    E --> F[Deals board]
-    E --> G[Work Orders board]
-    E --> H[(TTL cache)]
+    B --> C[Minimum-board router]
+    C --> D[Monday data repository]
+    D --> F[Deals board]
+    D --> G[Work Orders board]
+    D --> H[(TTL cache)]
     F --> I[Normalization]
     G --> I
     I --> J[Data-quality engine]
-    J --> K[Deterministic BI engine]
-    K --> L[Response composer]
-    L --> M[Signal · Evidence · Action]
-    C -. no model key / planner failure .-> N[Deterministic planner fallback]
-    N --> D
+    J --> K[Grounded query planner]
+    K --> L[Deterministic BI engine]
+    L --> M[Response composer]
+    M --> N[Signal · Evidence · Action]
+    K -. no model key / planner failure .-> O[Deterministic planner fallback]
 ```
 
 ### Module boundaries
@@ -80,7 +80,7 @@ flowchart TD
 
 ## Agent workflow
 
-The planner produces a strict internal contract:
+The pre-router selects Deals, Work Orders, or both before retrieval. After normalization exposes the live sector taxonomy, the grounded planner produces a strict internal contract:
 
 ```json
 {
@@ -97,12 +97,14 @@ The planner produces a strict internal contract:
 
 Raw chain-of-thought is never exposed. The UI shows only a concise scope statement. If `OPENAI_API_KEY` exists, the planner uses strict JSON-schema output through an allow-listed OpenAI-compatible Responses API; otherwise it uses the same deterministic contract and discloses that fallback. High-confidence business intent, board, period, and metric routing remain rule-authoritative, so a model cannot redirect canonical evaluator queries; the UI labels this path **AI-assisted · rule-validated**. The default provider is OpenAI with `gpt-5.4-mini`. The deployed assessment uses Groq's [OpenAI-compatible Responses API](https://console.groq.com/docs/responses-api) with [`openai/gpt-oss-20b`](https://console.groq.com/docs/model/openai/gpt-oss-20b), which supports strict JSON-schema output. Calculations remain deterministic in either mode.
 
+The chat endpoint emits newline-delimited progress events from the actual server phases—routing, Monday retrieval, normalization, quality assessment, and calculation—so the interface does not simulate pipeline progress with a timer.
+
 ## monday.com integration
 
 - POSTs GraphQL only to `https://api.monday.com/v2`.
 - Keeps the token and board IDs server-side.
 - Pins `API-Version: 2026-07`, the current stable version when implemented; monday recommends passing an explicit version to avoid silent breaking changes ([monday API versioning](https://developer.monday.com/api-reference/docs/api-versioning)).
-- Reads both configured boards concurrently.
+- Reads only the board(s) selected by the pre-router; bootstrap and cross-board questions read both concurrently.
 - Uses `items_page(limit: 500)` followed by `next_items_page` until the cursor is empty ([pagination reference](https://developer.monday.com/api-reference/reference/items-page)).
 - Reads `text`, raw `value`, column ID/type, and column title; monday documents the text/raw distinction for [column values](https://developer.monday.com/api-reference/reference/column-values-v2).
 - Performs no mutation and exposes no arbitrary GraphQL surface to the browser.
@@ -153,7 +155,7 @@ The supplied files share six clean sector values but no trustworthy row-level ke
 
 ## Leadership updates
 
-“Leadership updates” is interpreted as a generated weekly decision brief, not an export button. It combines active pipeline, billed revenue, commercial exceptions, operational exceptions, strongest sector, quality score, and next actions from the same live snapshot. The result can be copied and expanded to records/calculations.
+“Leadership updates” is interpreted as a generated weekly decision brief, not an export button. It combines active pipeline, billed revenue, commercial exceptions, operational exceptions, strongest sector, quality score, and next actions from the same live snapshot. The result can be copied, regenerated, and expanded in Analyst Mode to records/calculations.
 
 ## Tech stack
 
@@ -237,8 +239,16 @@ Open <http://localhost:3000>. Verify `/api/health` without expecting secrets to 
 - **LLM plans, code calculates:** better trust and unit-testability than model arithmetic.
 - **Sector-level cross-board join:** lower granularity, but avoids false row matches.
 - **No database:** Monday remains source of truth; a short in-memory cache is sufficient for the prototype.
-- **No streaming protocol:** the UI displays bounded real pipeline phases while a single validated request runs, reducing complexity.
+- **Lightweight progress stream:** NDJSON exposes bounded server phases without adding a separate realtime service.
 - **No arbitrary report builder:** the evaluator path is focused on meaningful end-to-end workflows.
+
+## Challenges faced
+
+- The downloaded filenames were swapped relative to their sheet contents, so board roles had to be validated from schemas rather than trusted filenames.
+- A live-data check initially made Deal Status and Execution Status look empty. Direct board-to-workbook reconciliation proved the imported values were present, so the fix stayed in the title-based ingestion/deployment path instead of rewriting correct source data. The remaining one Deal and four Work Order status gaps are preserved and disclosed rather than imputed.
+- Sparse dates and amounts made naive pipeline/revenue totals misleading, so exclusions and confidence caveats are explicit.
+- The two boards have no trustworthy row-level shared key; sector aggregation is safer than a false masked-name/customer join.
+- Groq's OpenAI-compatible Responses payload differs from SDK-shaped examples, so raw structured-output extraction and rule reconciliation were both tested.
 
 ## Known limitations
 
@@ -269,7 +279,7 @@ npm run build
 
 Automated coverage includes date/number normalization, raw preservation, quality scoring, all core analytics intents, cross-board lineage, absent-sector clarification, ambiguous questions, and contextual follow-ups. Manual/API/failure cases are in [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md).
 
-Final gates: **23/23 tests passed**, strict TypeScript passed, ESLint passed, the optimized Next.js production build passed, and `npm audit --omit=dev` reported zero production vulnerabilities. The public deployment was verified signed out with **Live from Monday.com**, 519 source records, and no exposed secrets. Live Deals, Work Orders, cross-board, leadership, ambiguity, missing-sector, and contextual follow-up flows were exercised; Groq-assisted plans were rule-validated before deterministic calculation.
+Final gates: **28/28 tests passed**, strict TypeScript passed, ESLint passed, the optimized Next.js production build passed, and `npm audit --omit=dev` reported zero production vulnerabilities. The public deployment was verified signed out with **Live from Monday.com** and no exposed secrets. Live Deals, Work Orders, cross-board, leadership, ambiguity, missing-sector, and contextual follow-up flows were exercised; Groq-assisted plans were rule-validated before deterministic calculation.
 
 ## AI tools used
 

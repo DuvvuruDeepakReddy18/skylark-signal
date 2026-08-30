@@ -4,7 +4,7 @@ import type { InsightAnswer as Insight } from "@/lib/types";
 import { formatInr } from "@/lib/utils";
 import {
   ArrowRight, BarChart3, Check, ChevronDown, CircleAlert, Clipboard, Database, ExternalLink,
-  FileSearch, Gauge, Lightbulb, Rows3, ShieldCheck, Sparkles, Target,
+  FileSearch, Gauge, Lightbulb, RotateCw, Rows3, ShieldCheck, Sparkles, Target,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -36,7 +36,15 @@ function MiniBarChart({ answer }: { answer: Insight }) {
   );
 }
 
-export function InsightAnswer({ answer, analystMode }: { answer: Insight; analystMode: boolean }) {
+export function InsightAnswer({
+  answer,
+  analystMode,
+  onRegenerate,
+}: {
+  answer: Insight;
+  analystMode: boolean;
+  onRegenerate?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const copyText = useMemo(
     () => [
@@ -62,7 +70,10 @@ export function InsightAnswer({ answer, analystMode }: { answer: Insight; analys
       <div className="answer-topline">
         <div className="agent-avatar"><Sparkles size={16} /></div>
         <div><p className="kicker">{answer.eyebrow}</p><span>{answer.plan.explanation}</span></div>
-        <button className="copy-button" onClick={copy}>{copied ? <Check size={14} /> : <Clipboard size={14} />}{copied ? "Copied" : "Copy"}</button>
+        <div className="answer-actions">
+          {onRegenerate && <button className="copy-button" onClick={onRegenerate}><RotateCw size={14} />Regenerate</button>}
+          <button className="copy-button" onClick={copy}>{copied ? <Check size={14} /> : <Clipboard size={14} />}{copied ? "Copied" : "Copy"}</button>
+        </div>
       </div>
 
       <div className="answer-hero">
@@ -92,7 +103,11 @@ export function InsightAnswer({ answer, analystMode }: { answer: Insight; analys
 
       {analystMode && <MiniBarChart answer={answer} />}
 
-      <div className="answer-details">
+      {!analystMode && answer.caveats.length > 0 && (
+        <div className="founder-caveat"><ShieldCheck size={14} /><span>{answer.caveats[0]}</span></div>
+      )}
+
+      {analystMode && <div className="answer-details">
         <details>
           <summary><ShieldCheck size={16} /><span>Data quality</span><small>{answer.caveats.length} note{answer.caveats.length === 1 ? "" : "s"}</small><ChevronDown size={15} /></summary>
           <div className="detail-body caveat-list">{answer.caveats.length ? answer.caveats.map((caveat) => <p key={caveat}><CircleAlert size={14} />{caveat}</p>) : <p><Check size={14} />No material caveat.</p>}</div>
@@ -107,7 +122,7 @@ export function InsightAnswer({ answer, analystMode }: { answer: Insight; analys
             {answer.records.length ? <table className="records-table"><thead><tr><th>Record</th><th>Board</th><th>Status</th><th>Value</th><th>Why shown</th></tr></thead><tbody>{answer.records.map((record) => <tr key={`${record.board}-${record.id}`}><td><strong>{record.name}</strong><span>{record.sector ?? "No sector"}</span></td><td>{record.board === "deals" ? "Deals" : "Work Orders"}</td><td>{record.status?.replaceAll("_", " ") ?? "Unknown"}</td><td>{record.value === null ? "—" : formatInr(record.value)}</td><td>{record.reason ?? "Included evidence"}</td></tr>)}</tbody></table> : <p className="empty-records">No supporting record list is needed for this response.</p>}
           </div>
         </details>
-      </div>
+      </div>}
 
       <footer className="answer-footer">
         <div>{answer.sources.map((source) => <span key={source}><ExternalLink size={12} />{source}</span>)}</div>

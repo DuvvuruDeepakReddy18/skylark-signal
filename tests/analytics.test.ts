@@ -2,6 +2,7 @@ import { buildInsightAnswer, computeBusinessPulse, computeSectorSignals } from "
 import { normalizeSnapshot } from "@/lib/data/normalization";
 import { assessDataQuality } from "@/lib/data/quality";
 import { generateDemoSnapshot } from "@/lib/demo/generator";
+import { adaptAnswerForMode } from "@/lib/agent/orchestrator";
 import type { QueryIntent, QueryPlan } from "@/lib/types";
 import { describe, expect, it } from "vitest";
 
@@ -66,5 +67,16 @@ describe("deterministic analytics", () => {
     expect(answer.keyMetric).not.toMatch(/NaN|Infinity/);
     expect(answer.records).toHaveLength(0);
     expect(answer.headline).toMatch(/No reliable/i);
+  });
+
+  it("keeps Founder Mode concise while Analyst Mode retains drill-down", () => {
+    const full = buildInsightAnswer(plan("leadership_update"), dataset, quality, now);
+    const founder = adaptAnswerForMode(full, true);
+    const analyst = adaptAnswerForMode(full, false);
+    expect(founder.evidence.length).toBeLessThanOrEqual(3);
+    expect(founder.records).toEqual(full.records);
+    expect(founder.caveats).toEqual(full.caveats);
+    expect(founder.chart).toEqual(full.chart);
+    expect(analyst).toEqual(full);
   });
 });

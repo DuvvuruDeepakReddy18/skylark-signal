@@ -87,9 +87,12 @@ function rawValue(column: RawMondayColumnValue | undefined): unknown {
 }
 
 function field(item: RawBoardItem, names: readonly string[]): unknown {
-  const wanted = new Set(names.map(normalizedKey));
-  const column = item.columns.find((candidate) => wanted.has(normalizedKey(candidate.title)));
-  return rawValue(column);
+  for (const name of names) {
+    const wanted = normalizedKey(name);
+    const column = item.columns.find((candidate) => normalizedKey(candidate.title) === wanted);
+    if (column) return rawValue(column);
+  }
+  return null;
 }
 
 function parseText(value: unknown): { value: string | null; display: string | null } {

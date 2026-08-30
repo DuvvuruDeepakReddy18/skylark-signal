@@ -24,4 +24,43 @@ describe("normalization", () => {
     expect(normalized.issues.some((issue) => issue.code === "invalid_date")).toBe(true);
     expect(normalized.workOrders.some((order) => order.sector === "mining")).toBe(true);
   });
+
+  it("prefers specific status columns over an earlier empty generic Status column", () => {
+    const column = (id: string, title: string, text: string | null) => ({
+      id,
+      title,
+      type: "text",
+      text,
+      value: text,
+    });
+    const normalized = normalizeSnapshot({
+      deals: {
+        items: [{
+          id: "deal-1",
+          name: "Masked deal",
+          columns: [
+            column("status", "Status", null),
+            column("deal_status", "Deal Status", "Open"),
+            column("value", "Masked deal value", "100000"),
+            column("sector", "Sector/service", "Mining"),
+          ],
+        }],
+      },
+      workOrders: {
+        items: [{
+          id: "work-1",
+          name: "Masked work order",
+          columns: [
+            column("status", "Status", null),
+            column("execution", "Execution Status", "Completed"),
+            column("serial", "Serial #", "WO-001"),
+            column("sector", "Sector", "Mining"),
+          ],
+        }],
+      },
+    });
+
+    expect(normalized.deals[0].status).toBe("open");
+    expect(normalized.workOrders[0].executionStatus).toBe("completed");
+  });
 });

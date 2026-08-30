@@ -1,4 +1,4 @@
-import { createQueryPlan, extractResponseText, reconcileModelPlan } from "@/lib/agent/planner";
+import { createQueryPlan, createRoutingPlan, extractResponseText, reconcileModelPlan } from "@/lib/agent/planner";
 import type { ConversationContext, QueryPlan } from "@/lib/types";
 import { describe, expect, it } from "vitest";
 
@@ -64,6 +64,12 @@ describe("query planner fallback", () => {
     expect((await createQueryPlan("Which deals need attention?", sectors)).intent).toBe("deals_attention");
     expect((await createQueryPlan("Which work orders are at risk?", sectors)).intent).toBe("work_orders_risk");
     expect((await createQueryPlan("Prepare my leadership update", sectors)).intent).toBe("leadership_update");
+  });
+
+  it("routes to the minimum board set before retrieval", () => {
+    expect(createRoutingPlan("Which deals need attention?").boards).toEqual(["deals"]);
+    expect(createRoutingPlan("Which work orders are at risk?").boards).toEqual(["work_orders"]);
+    expect(createRoutingPlan("Compare Renewables sales pipeline with execution.").boards).toEqual(["deals", "work_orders"]);
   });
 
   it("refuses to invent an absent sector", async () => {

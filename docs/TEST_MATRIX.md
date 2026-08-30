@@ -30,8 +30,9 @@
 
 ## Verified result
 
-- 23/23 automated tests passed.
+- 28/28 automated tests passed, including minimum-board routing, specific-before-generic status-column precedence, Founder/Analyst mode behavior, and Monday auth/rate-limit/schema failure classification.
 - Strict TypeScript, ESLint, optimized production build, and production dependency audit passed.
 - Signed-out public checks passed for the hosted app and GitHub repository.
-- The live deployment reported 519 Monday source records.
+- The live deployment reported 519 Monday source records (344 Deals + 175 Work Orders), 51 open deals, ₹68.82Cr active pipeline, 58 active work orders, 47 operational risks, and a 94/100 reliability score.
+- Direct reconciliation confirmed 343/344 Deal Status values and 171/175 Execution Status values; only the five genuine source gaps remain, with no imputation.
 - Canonical Deals, Work Orders, cross-board, leadership, ambiguity, missing-sector, and contextual follow-up flows were exercised in production with Groq-assisted, rule-validated plans.

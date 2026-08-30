@@ -3,6 +3,7 @@ interface LogContext {
   durationMs?: number;
   count?: number;
   mode?: string;
+  boards?: string;
   intent?: string;
   errorCode?: string;
 }

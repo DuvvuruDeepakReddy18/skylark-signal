@@ -2,6 +2,7 @@ export type DataMode = "live" | "demo";
 export type Freshness = "live" | "cached" | "stale" | "simulated";
 export type BoardKind = "deals" | "work_orders";
 export type Severity = "info" | "warning" | "error";
+export type AnalysisStage = "planning" | "retrieval" | "normalization" | "quality" | "analysis";
 
 export interface RawMondayColumnValue {
   id: string;

@@ -79,6 +79,35 @@ function boardsFor(intent: QueryIntent): QueryPlan["boards"] {
   return ["deals", "work_orders"];
 }
 
+/**
+ * Selects the minimum board set before any business data is downloaded.
+ * The full planner still runs after retrieval so sector names can be grounded
+ * against the live taxonomy instead of a hardcoded list.
+ */
+export function createRoutingPlan(
+  message: string,
+  context?: ConversationContext,
+): Pick<QueryPlan, "intent" | "boards"> {
+  const normalized = normalizedKey(message);
+  const priorIntent = context?.lastPlan?.intent;
+  let intent: QueryIntent;
+
+  if (/^how are we doing[?!.]*$/.test(normalized)) intent = "clarification";
+  else if (/leadership|weekly update|briefing/.test(normalized)) intent = "leadership_update";
+  else if (/data quality|quality score|missing data|clean is/.test(normalized)) intent = "data_quality";
+  else if (/strongest|largest|best/.test(normalized) && /sector|pipeline/.test(normalized)) intent = "strongest_sector";
+  else if (/compare|versus| vs |sales.*execution|pipeline.*execution|riskier/.test(normalized)) intent = "cross_board";
+  else if (/which deals|deal.*attention|need attention|overdue deal|stale deal/.test(normalized)) intent = "deals_attention";
+  else if (/work order|operations|execution/.test(normalized) && /risk|status|perform|doing|summary/.test(normalized)) intent = "work_orders_risk";
+  else if (/revenue|billed|billing|receivable|collection/.test(normalized)) intent = "revenue";
+  else if (/pipeline/.test(normalized)) intent = "pipeline_health";
+  else if (/what about|and what|same for/.test(normalized) && priorIntent) intent = priorIntent;
+  else if (/perform|performing|how is/.test(normalized)) intent = "sector_performance";
+  else intent = "clarification";
+
+  return { intent, boards: boardsFor(intent) };
+}
+
 function periodFrom(message: string): QueryPeriod {
   if (/this quarter|current quarter|quarterly/.test(message)) return "current_quarter";
   if (/90 days|last three months|last 3 months/.test(message)) return "last_90_days";

@@ -27,6 +27,21 @@ interface GraphqlError {
   extensions?: { code?: string };
 }
 
+export function mondayErrorCodeForHttpStatus(
+  status: number,
+): MondayApiError["code"] | null {
+  if (status === 401 || status === 403) return "authentication";
+  if (status === 429) return "rate_limit";
+  if (status >= 400) return "unavailable";
+  return null;
+}
+
+export function mondayErrorCodeForGraphql(errors: GraphqlError[]): MondayApiError["code"] {
+  return errors.some((error) =>
+    ["PERMISSION_DENIED", "UNAUTHORIZED"].includes(error.extensions?.code ?? ""),
+  ) ? "authentication" : "schema";
+}
+
 interface GraphqlResponse<T> {
   data?: T;
   errors?: GraphqlError[];
@@ -135,25 +150,24 @@ async function request<T>(query: string, variables: Record<string, unknown>, req
       signal: controller.signal,
     });
 
-    if (response.status === 401 || response.status === 403) {
+    const httpErrorCode = mondayErrorCodeForHttpStatus(response.status);
+    if (httpErrorCode === "authentication") {
       throw new MondayApiError("Monday.com rejected the configured credentials.", "authentication");
     }
-    if (response.status === 429) {
+    if (httpErrorCode === "rate_limit") {
       throw new MondayApiError("Monday.com rate limit reached. Try again shortly.", "rate_limit");
     }
-    if (!response.ok) {
+    if (httpErrorCode) {
       throw new MondayApiError("Monday.com is temporarily unavailable.", "unavailable");
     }
 
     const payload = (await response.json()) as GraphqlResponse<T>;
     if (payload.errors?.length) {
       const combined = payload.errors.map((error) => error.message).join("; ");
-      const isPermission = payload.errors.some((error) =>
-        ["PERMISSION_DENIED", "UNAUTHORIZED"].includes(error.extensions?.code ?? ""),
-      );
+      const errorCode = mondayErrorCodeForGraphql(payload.errors);
       throw new MondayApiError(
-        isPermission ? "Monday.com access to one of the boards was denied." : `Monday.com query failed: ${combined}`,
-        isPermission ? "authentication" : "schema",
+        errorCode === "authentication" ? "Monday.com access to one of the boards was denied." : `Monday.com query failed: ${combined}`,
+        errorCode,
       );
     }
     if (!payload.data) {

@@ -1,4 +1,5 @@
 import { runAnalysis } from "@/lib/agent/orchestrator";
+import type { AnalysisStage } from "@/lib/types";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -20,7 +21,30 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!parsed.success) {
       return NextResponse.json({ error: "Please enter a valid business question." }, { status: 400 });
     }
-    const payload = await runAnalysis(parsed.data as Parameters<typeof runAnalysis>[0]);
+    const analysisRequest = parsed.data as Parameters<typeof runAnalysis>[0];
+    if (request.headers.get("accept")?.includes("application/x-ndjson")) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const send = (event: unknown) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+          const progress = (stage: AnalysisStage) => send({ type: "progress", stage });
+          void runAnalysis(analysisRequest, progress)
+            .then((payload) => send({ type: "result", payload }))
+            .catch((error: unknown) => send({
+              type: "error",
+              error: error instanceof Error ? error.message : "The analysis could not be completed.",
+            }))
+            .finally(() => controller.close());
+        },
+      });
+      return new NextResponse(stream, {
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+        },
+      });
+    }
+    const payload = await runAnalysis(analysisRequest);
     return NextResponse.json(payload, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The analysis could not be completed.";
