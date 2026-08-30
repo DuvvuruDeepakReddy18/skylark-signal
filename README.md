@@ -242,7 +242,7 @@ Open <http://localhost:3000>. Verify `/api/health` without expecting secrets to 
 
 ## Known limitations
 
-- Live Monday behavior requires valid board access and was not exercised without account credentials.
+- Live Monday behavior was exercised against the imported assessment boards; continued operation still depends on the configured account retaining access to both board IDs.
 - Column-title aliases cover the supplied schema and common variants; a production system would add an admin mapping screen.
 - Billed revenue is not formal revenue recognition.
 - The source lacks recent activity/next-step fields, so deal staleness uses date/stage-age rules.
@@ -269,11 +269,12 @@ npm run build
 
 Automated coverage includes date/number normalization, raw preservation, quality scoring, all core analytics intents, cross-board lineage, absent-sector clarification, ambiguous questions, and contextual follow-ups. Manual/API/failure cases are in [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md).
 
-Final local gates: **20/20 tests passed**, strict TypeScript passed, ESLint passed, the optimized Next.js production build passed, and `npm audit --omit=dev` reported zero production vulnerabilities. The public deployment returned HTTP 200, its health/bootstrap endpoints disclosed Demo Mode correctly, and an end-to-end strongest-sector chat request returned a traced result.
+Final gates: **23/23 tests passed**, strict TypeScript passed, ESLint passed, the optimized Next.js production build passed, and `npm audit --omit=dev` reported zero production vulnerabilities. The public deployment was verified signed out with **Live from Monday.com**, 519 source records, and no exposed secrets. Live Deals, Work Orders, cross-board, leadership, ambiguity, missing-sector, and contextual follow-up flows were exercised; Groq-assisted plans were rule-validated before deterministic calculation.
 
 ## AI tools used
 
 - **OpenAI Codex:** architecture brainstorming, implementation assistance, debugging, tests, design iteration, and documentation.
+- **GroqCloud (`openai/gpt-oss-20b`):** production natural-language planning through strict structured output; deterministic routing guardrails and analytics remain authoritative.
 - **OpenAI official documentation:** Responses API structured outputs and model capability verification.
 - **monday.com official documentation:** current API version, authentication, pagination, and column-value behavior.
 

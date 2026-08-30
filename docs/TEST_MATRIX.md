@@ -28,6 +28,10 @@
 - Accessibility: semantic headings, buttons, details, labels, live status, reduced-motion support.
 - Security: `/api/health` returns booleans only; secrets absent from browser network responses.
 
-## Automated result
+## Verified result
 
-Run `npm test`, `npm run typecheck`, `npm run lint`, and `npm run build`. Record final counts and deployment smoke-test results before submitting.
+- 23/23 automated tests passed.
+- Strict TypeScript, ESLint, optimized production build, and production dependency audit passed.
+- Signed-out public checks passed for the hosted app and GitHub repository.
+- The live deployment reported 519 Monday source records.
+- Canonical Deals, Work Orders, cross-board, leadership, ambiguity, missing-sector, and contextual follow-up flows were exercised in production with Groq-assisted, rule-validated plans.
