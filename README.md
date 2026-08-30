@@ -6,7 +6,7 @@ Skylark Signal is a Founder Intelligence agent over monday.com. It answers busin
 
 ## Links
 
-- Hosted prototype: _added after deployment_
+- Hosted prototype: <https://skylark-signal-one.vercel.app>
 - Source repository: _added after repository publication_
 - Assignment submission form: <https://forms.gle/qGihfi4zCLBxKWK68>
 
@@ -43,7 +43,7 @@ This reduces hallucinated arithmetic and makes results testable.
 | Cross-board queries | Aggregate join on normalized sector; unsafe masked-name/customer joins rejected |
 | Graceful API failure | Timeout, auth, permission, rate-limit, schema, stale-cache, empty-board, and missing-config paths |
 | Leadership updates (optional) | Live/simulated weekly briefing with pipeline, billed revenue, sales/operations risks, quality, and actions |
-| Hosted, source, README | Deployment and repository links are listed above once published |
+| Hosted, source, README | Public deployment above; repository link added after publication |
 | Decision Log ≤2 pages | `DECISION_LOG.md` plus submission-ready PDF |
 
 More detail is in [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md).
@@ -265,6 +265,8 @@ npm run build
 ```
 
 Automated coverage includes date/number normalization, raw preservation, quality scoring, all core analytics intents, cross-board lineage, absent-sector clarification, ambiguous questions, and contextual follow-ups. Manual/API/failure cases are in [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md).
+
+Final local gates: **20/20 tests passed**, strict TypeScript passed, ESLint passed, the optimized Next.js production build passed, and `npm audit --omit=dev` reported zero production vulnerabilities. The public deployment returned HTTP 200, its health/bootstrap endpoints disclosed Demo Mode correctly, and an end-to-end strongest-sector chat request returned a traced result.
 
 ## AI tools used
 
