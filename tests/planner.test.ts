@@ -39,6 +39,25 @@ describe("query planner fallback", () => {
     expect(reconciled.planner).toBe("openai");
   });
 
+  it("keeps the canonical generic question as a clarification even with punctuation", async () => {
+    const rulePlan = await createQueryPlan("How are we doing?", sectors);
+    const mismatchedModelPlan: QueryPlan = {
+      ...rulePlan,
+      intent: "leadership_update",
+      boards: ["deals", "work_orders"],
+      metrics: ["pipeline_value", "billed_revenue"],
+      needsClarification: false,
+      clarificationQuestion: null,
+      confidence: 0.82,
+      planner: "openai",
+    };
+
+    const reconciled = reconcileModelPlan("How are we doing?", rulePlan, mismatchedModelPlan);
+
+    expect(reconciled.intent).toBe("clarification");
+    expect(reconciled.needsClarification).toBe(true);
+  });
+
   it("maps the required evaluator questions", async () => {
     expect((await createQueryPlan("How is our pipeline looking this quarter?", sectors)).intent).toBe("pipeline_health");
     expect((await createQueryPlan("Which sector has the strongest pipeline?", sectors)).intent).toBe("strongest_sector");

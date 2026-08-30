@@ -198,7 +198,7 @@ export function reconcileModelPlan(
   const ruleContractIsAuthoritative =
     rulePlan.intent !== "clarification" ||
     rulePlan.confidence >= 0.9 ||
-    normalized === "how are we doing";
+    /^how are we doing[?!.]*$/.test(normalized);
 
   return ruleContractIsAuthoritative ? { ...rulePlan, planner: "openai" } : modelPlan;
 }
